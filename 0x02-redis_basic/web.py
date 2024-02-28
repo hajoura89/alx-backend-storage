@@ -7,6 +7,7 @@ from typing import Callable
 
 
 redis_store = redis.Redis()
+"""The Redis instance"""
 
 
 def data_cacher(method: Callable) -> Callable:
@@ -29,7 +30,3 @@ def data_cacher(method: Callable) -> Callable:
 def get_page(url: str) -> str:
     """Returns the HTML content of a URL"""
     return requests.get(url).text
-
-
-if __name__ == "__main__":
-    get_page('http://slowwly.robertomurray.co.uk')
