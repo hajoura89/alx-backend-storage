@@ -3,8 +3,6 @@
 import redis
 import requests
 from functools import wraps
-from typing import Callable
-
 
 redis_store = redis.Redis()
 
@@ -12,21 +10,29 @@ redis_store = redis.Redis()
 def data_cacher(method: Callable) -> Callable:
     """Caches the output of fetched data"""
     @wraps(method)
-    def invoker(url) -> str:
-        """The wrapper function for caching the output"""
-        redis_store.incr(f'count:{url}')
-        result = redis_store.get(f'result:{url}')
-        if result:
-            return result.decode('utf-8')
-        result = method(url)
-        redis_store.set(f'count:{url}', 0)
-        redis_store.setex(f'result:{url}', 10, result)
-        return result
-    return invoker
+    def wrapper(url):
+        """wrapper function"""
+        key = "cached:" + url
+        cached_value = redis_store.get(key)
+        if cached_value:
+            return cached_value.decode("utf-8")
+
+            # Get new content and update cache
+        key_count = "count:" + url
+        html_content = method(url)
+
+        redis_store.incr(key_count)
+        redis_store.set(key, html_content, ex=10)
+        redis_store.expire(key, 10)
+        return html_content
+    return wrapper
 
 
 @data_cacher
 def get_page(url: str) -> str:
-    """Returns the content of a URL after caching the request's response,
-    & tracking the request"""
+    """Returns the HTML content of a URL"""
     return requests.get(url).text
+ 
+
+if __name__ == "__main__":
+    get_page('http://slowwly.robertomurray.co.uk')
